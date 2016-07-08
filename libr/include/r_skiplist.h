@@ -34,6 +34,7 @@ R_API bool r_skiplist_delete_node(RSkipList *list, RSkipListNode *node);
 R_API RSkipListNode* r_skiplist_find(RSkipList* list, void* data);
 R_API void r_skiplist_join(RSkipList *l1, RSkipList *l2);
 R_API void *r_skiplist_get_first(RSkipList *list);
+R_API void *r_skiplist_get_n(RSkipList *list, int n);
 R_API bool r_skiplist_empty(RSkipList *list);
 R_API RList *r_skiplist_to_list(RSkipList *list);
 

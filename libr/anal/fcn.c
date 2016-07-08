@@ -39,7 +39,7 @@ R_API const char *r_anal_fcn_type_tostring(int type) {
 	return "unk";
 }
 
-R_API int r_anal_fcn_resize (RAnalFunction *fcn, int newsize) {
+R_API int r_anal_fcn_resize(RAnalFunction *fcn, int newsize) {
 	ut64 eof; /* end of function */
 	RAnalBlock *bb;
 	RSkipListNode *iter, *iter2;
@@ -1397,9 +1397,51 @@ R_API RSkipList* r_anal_fcn_get_bbs(RAnalFunction *fcn) {
 	return fcn->bbs;
 }
 
-R_API int r_anal_fcn_is_in_offset (RAnalFunction *fcn, ut64 addr) {
+// Constructs the "collapsed_ranges" list for the function.
+void build_collapsed_range(RAnalFunction *fcn) {
+	int i, n = r_skiplist_length (fcn->bbs);
+	RStack* stack = r_stack_new (n);
+	RAnalBlock *top;
 	RAnalBlock *bb;
+	if (fcn->collapsed_ranges) {
+		r_skiplist_purge (fcn->collapsed_ranges);
+		fcn->collapsed_ranges->compare = (RListComparator)r_anal_bb_compare;
+	} else {
+		fcn->collapsed_ranges = r_skiplist_new (free, (RListComparator)r_anal_bb_compare);
+	}
+	bb = r_skiplist_get_n (fcn->bbs, 0);
+	if (bb) {
+		r_stack_push (stack, bb);
+		for (i = 1; i < n; i++) {
+			top = (RAnalBlock*)r_stack_peek (stack);
+			bb = r_skiplist_get_n (fcn->bbs, i);
+			if ((top->addr + top->size) < bb->addr) {
+				r_stack_push (stack, bb);
+			} else if ((top->addr + top->size) < (bb->addr + bb->size)) {
+				size_t topend = bb->addr + bb->size;
+				top->size = topend - top->addr;
+				(void)r_stack_pop (stack);
+				r_stack_push (stack, top);
+			}
+		}
+		while (!r_stack_is_empty (stack)) {
+			bb = calloc (1, sizeof (RAnalBlock));
+			top = (RAnalBlock*)r_stack_pop (stack);
+			bb->addr = top->addr;
+			bb->size = top->size;
+			r_skiplist_insert (fcn->collapsed_ranges, bb);
+		}
+	}
+	fcn->collapsed_ranges->compare = (RListComparator) r_anal_bb_compare_range;
+}
+
+R_API int r_anal_fcn_is_in_offset(RAnalFunction *fcn, ut64 addr) {
 	RSkipListNode *iter;
+
+	if (!fcn->ranges_valid) {
+		build_collapsed_range (fcn);
+		fcn->ranges_valid = true;
+	}
 
 	if (r_skiplist_empty (fcn->bbs)) {
 		// hack to make anal_java work, because it doesn't use
@@ -1408,12 +1450,10 @@ R_API int r_anal_fcn_is_in_offset (RAnalFunction *fcn, ut64 addr) {
 		return addr >= fcn->addr && addr < fcn->addr + r_anal_fcn_size (fcn);
 	}
 
-	fcn->bbs->compare = (RListComparator)r_anal_bb_compare_range;
 	RAnalBlock search_bb;
 	search_bb.addr = addr;
 	search_bb.size = 0;
-	iter = r_skiplist_find (fcn->bbs, &search_bb);
-	fcn->bbs->compare = (RListComparator)r_anal_bb_compare;
+	iter = r_skiplist_find (fcn->collapsed_ranges, &search_bb);
 	return iter != NULL;
 }
 

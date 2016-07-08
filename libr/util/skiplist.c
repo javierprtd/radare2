@@ -223,6 +223,21 @@ R_API void *r_skiplist_get_first(RSkipList *list) {
 	return res == list->head ? NULL : res->data;
 }
 
+// Returns the nth data element in the list, if present, NULL otherwise
+R_API void *r_skiplist_get_n(RSkipList *list, int n) {
+	int count = 0;
+	RSkipListNode *node;
+	void *data;
+	if (!list || n < 0) return NULL;
+	r_skiplist_foreach (list, node, data) {
+		if (count == n) {
+			return data;
+		}
+		++count;
+	}
+	return NULL;
+}
+
 // Return true if the list is empty
 R_API bool r_skiplist_empty(RSkipList *list) {
 	return list->size == 0;
