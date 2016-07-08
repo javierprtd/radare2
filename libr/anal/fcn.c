@@ -51,6 +51,7 @@ R_API int r_anal_fcn_resize (RAnalFunction *fcn, int newsize) {
 		if (bb->addr >= eof) {
 			// already called by r_skiplist_delete_node r_anal_bb_free (bb);
 			r_skiplist_delete_node (fcn->bbs, iter);
+			fcn->ranges_valid = false;
 			continue;
 		}
 		if (bb->addr + bb->size >= eof) {
@@ -84,6 +85,8 @@ R_API RAnalFunction *r_anal_fcn_new() {
 	fcn->xrefs = r_anal_ref_list_new ();
 #endif
 	fcn->bbs = r_anal_bb_list_new ();
+	fcn->ranges_valid = false;
+	fcn->collapsed_ranges = NULL;
 	fcn->fingerprint = NULL;
 	fcn->diff = r_anal_diff_new ();
 	return fcn;
@@ -194,6 +197,7 @@ static RAnalBlock* appendBasicBlock (RAnal *anal, RAnalFunction *fcn, ut64 addr)
 	bb->fail = UT64_MAX;
 	bb->type = 0; // TODO
 	r_skiplist_insert (fcn->bbs, bb);
+	fcn->ranges_valid = false;
 	if (anal->cb.on_fcn_bb_new) {
 		anal->cb.on_fcn_bb_new (anal, anal->user, fcn, bb);
 	}

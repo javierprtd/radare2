@@ -667,6 +667,7 @@ static bool anal_fcn_del_bb(RCore *core, const char *input) {
 			search_bb.addr = addr;
 			search_bb.size = 0;
 			res = r_skiplist_delete (fcn->bbs, &search_bb);
+			fcn->collapsed_ranges = false;
 			if (res) return true;
 
 			eprintf ("Cannot find basic block\n");

@@ -314,6 +314,8 @@ typedef struct r_anal_type_function_t {
 	RList *locs; // list of local variables
 	//RList *locals; // list of local labels -> moved to anal->sdb_fcns
 	RSkipList *bbs;
+	RSkipList *collapsed_ranges; // Collapsed Ranges of basic blocks
+	bool ranges_valid;  // Is the collapsed_ranges currently valid
 	RList *vars;
 #if FCN_OLD
 	RList *refs;
